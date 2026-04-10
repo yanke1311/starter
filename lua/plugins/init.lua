@@ -38,6 +38,9 @@ return {
             -- Configuration here, or leave empty to use defaults
         })
     end
+  },
+  {
+  "nelstrom/vim-visual-star-search",
   }
 
   -- test new blink
