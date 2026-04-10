@@ -9,6 +9,8 @@ vim.opt.tabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.softtabstop = 4
 vim.opt.expandtab = true
+-- vim.opt.cursorline = true
+-- vim.opt.cursorcolumn = true
 
 local autocmd = vim.api.nvim_create_autocmd
 
@@ -184,3 +186,23 @@ require("cmake-tools").setup {
   cmake_virtual_text_support = true, -- Show the target related to current file using virtual text (at right corner)
   cmake_use_scratch_buffer = false, -- A buffer that shows what cmake-tools has done
 }
+
+-- local auto_dark_mode = require("auto-dark-mode")
+--
+-- auto_dark_mode.setup({
+--   update_interval = 1000,
+--
+--   set_dark_mode = function()
+--     -- ✅ 新 API，无警告
+--     vim.opt.background = "dark"
+--     vim.cmd("colorscheme tokyonight-storm")
+--   end,
+--
+--   set_light_mode = function()
+--     -- ✅ 新 API，无警告
+--     vim.opt.background = "light"
+--     vim.cmd("colorscheme tokyonight-day")
+--   end,
+-- })
+--
+-- auto_dark_mode.init()

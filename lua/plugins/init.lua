@@ -23,7 +23,12 @@ return {
   {
     "Civitasv/cmake-tools.nvim", opts = {}
   },
-
+  {
+    "folke/tokyonight.nvim"
+  },
+  {
+    "f-person/auto-dark-mode.nvim",
+  },
   {
     "kylechui/nvim-surround",
     version = "^3.0.0", -- Use for stability; omit to use `main` branch for the latest features

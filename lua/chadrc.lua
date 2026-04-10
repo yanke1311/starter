@@ -5,8 +5,25 @@
 ---@type ChadrcConfig
 local M = {}
 
+-- local function is_dark_mode()
+--   local handle = io.popen("defaults read -g AppleInterfaceStyle 2>/dev/null")
+--   if not handle then
+--     return false
+--   end
+--
+--   local result = handle:read("*a")
+--   handle:close()
+--
+--   return result:match("Dark") ~= nil
+-- end
+--
+-- local theme = is_dark_mode() and "onedark" or "one_light"
+
 M.base46 = {
-	theme = "onedark",
+	theme = "one_light",
+      -- theme = theme,
+      transparency = false,
+      theme_toggle = { "one_light", "onedark" },
 
 	-- hl_override = {
 	-- 	Comment = { italic = true },

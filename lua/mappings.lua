@@ -16,6 +16,8 @@ map("n", "<S-h>", "<cmd>bprevious<CR>", { desc = "tab next" })
 -- C-t open new tab
 -- C-v open vertical
 -- C-x open horizontal
+map("n", "<M-n>", "<cmd>NvimTreeToggle<CR>", { desc = "NvimTreeToggle" })
+map("n", "<Leader>q", "<cmd>cclose<CR><cmd>lclose<CR>", { desc = "close quickfix window" })
 --
 
 -- map({ "n", "i", "v" }, "<C-s>", "<cmd> w <cr>")
