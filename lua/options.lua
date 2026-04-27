@@ -411,6 +411,38 @@ local function confirm_qf_item_and_close()
   clear_symbol_matches()
 end
 
+-- lsp hover
+vim.opt.updatetime = 500
+vim.opt.mouse = "a"
+
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    local bufnr = args.buf
+
+    vim.keymap.set("n", "K", vim.lsp.buf.hover, {
+      buffer = bufnr,
+      desc = "LSP Hover",
+    })
+
+    vim.keymap.set("n", "<leader>k", vim.lsp.buf.signature_help, {
+      buffer = bufnr,
+      desc = "Signature Help",
+    })
+
+    vim.keymap.set("i", "<C-k>", vim.lsp.buf.signature_help, {
+      buffer = bufnr,
+      desc = "Signature Help",
+    })
+
+    vim.api.nvim_create_autocmd("CursorHold", {
+      buffer = bufnr,
+      callback = function()
+        vim.lsp.buf.hover()
+      end,
+    })
+  end,
+})
+
 vim.api.nvim_create_autocmd("FileType", {
   group = qf_preview_group,
   pattern = "qf",
