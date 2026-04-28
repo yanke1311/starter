@@ -434,12 +434,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
       desc = "Signature Help",
     })
 
-    vim.api.nvim_create_autocmd("CursorHold", {
-      buffer = bufnr,
-      callback = function()
-        vim.lsp.buf.hover()
-      end,
-    })
+    -- 鼠标悬停自动hover
+    -- vim.api.nvim_create_autocmd("CursorHold", {
+    --   buffer = bufnr,
+    --   callback = function()
+    --     vim.lsp.buf.hover()
+    --   end,
+    -- })
   end,
 })
 
