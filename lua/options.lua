@@ -434,13 +434,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
       desc = "Signature Help",
     })
 
-    -- 鼠标悬停自动hover
-    -- vim.api.nvim_create_autocmd("CursorHold", {
-    --   buffer = bufnr,
-    --   callback = function()
-    --     vim.lsp.buf.hover()
-    --   end,
-    -- })
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and client:supports_method "textDocument/codeLens" then
+      vim.lsp.codelens.enable(true, { bufnr = bufnr })
+    end
   end,
 })
 
@@ -495,19 +492,6 @@ vim.api.nvim_create_autocmd("BufWinLeave", {
 })
 
 
--- 用于lsp的lens
-vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
-  callback = function(args)
-    local bufnr = args.buf
-    for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
-      if client.server_capabilities.codeLensProvider then
-        vim.lsp.codelens.refresh({ bufnr = bufnr })
-        return
-      end
-    end
-  end,
-})
-
 -- cmake tools
 local osys = require("cmake-tools.osys")
 require("cmake-tools").setup {
@@ -533,7 +517,7 @@ require("cmake-tools").setup {
                           -- copy:      this will automatically copy compile commands file to target
                           -- lsp:       this will automatically set compile commands file location using lsp
                           -- none:      this will make this option ignored
-    target = vim.loop.cwd() -- path to directory, this is used only if action == "soft_link" or action == "copy"
+    target = vim.uv.cwd() -- path to directory, this is used only if action == "soft_link" or action == "copy"
   },
   cmake_kits_path = nil, -- this is used to specify global cmake kits path, see CMakeKits for detailed usage
   cmake_variants_message = {

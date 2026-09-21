@@ -20,15 +20,24 @@ local M = {}
 -- local theme = is_dark_mode() and "onedark" or "one_light"
 
 M.base46 = {
-	theme = "one_light",
-      -- theme = theme,
+	theme = "catppuccin-latte",
       transparency = false,
-      theme_toggle = { "one_light", "onedark" },
+      theme_toggle = { "catppuccin-latte", "catppuccin" },
 
-	-- hl_override = {
-	-- 	Comment = { italic = true },
-	-- 	["@comment"] = { italic = true },
-	-- },
+	hl_override = {
+		TelescopeMatching = { fg = "orange", bold = true, bg = "NONE" },
+		TelescopeSelection = { bg = "one_bg3", bold = true },
+	},
+	hl_add = {
+		TelescopeResultsComment = { fg = "light_grey" },
+		RainbowDelimiterRed = { fg = "red" },
+		RainbowDelimiterYellow = { fg = "yellow" },
+		RainbowDelimiterBlue = { fg = "nord_blue" },
+		RainbowDelimiterOrange = { fg = "orange" },
+		RainbowDelimiterGreen = { fg = "green" },
+		RainbowDelimiterViolet = { fg = "purple" },
+		RainbowDelimiterCyan = { fg = "teal" },
+	},
 }
 
 -- M.nvdash = { load_on_startup = true }

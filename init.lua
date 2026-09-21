@@ -1,3 +1,6 @@
+-- 必须在 lazy / AI 插件加载前补 PATH，否则 GUI nvim 找不到 CLI
+require("configs.cli_path").setup()
+
 vim.g.base46_cache = vim.fn.stdpath "data" .. "/base46/"
 vim.g.mapleader = ","
 
