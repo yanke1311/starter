@@ -65,12 +65,6 @@ return {
     end,
   },
   {
-    "folke/tokyonight.nvim"
-  },
-  {
-    "f-person/auto-dark-mode.nvim",
-  },
-  {
     "lewis6991/satellite.nvim",
     event = "VeryLazy",
     opts = require "configs.satellite",
@@ -82,6 +76,11 @@ return {
     config = function()
       require("configs.rainbow_delimiters").setup()
     end,
+  },
+  {
+    "nvim-treesitter/nvim-treesitter-context",
+    event = { "BufReadPost", "BufNewFile" },
+    opts = require "configs.treesitter_context",
   },
   {
     "kylechui/nvim-surround",
@@ -282,8 +281,14 @@ return {
       "nvim-tree/nvim-web-devicons",
       {
         "MeanderingProgrammer/render-markdown.nvim",
-        ft = { "Avante" },
-        opts = { file_types = { "Avante" } },
+        ft = { "markdown", "Avante" },
+        opts = function()
+          return require("configs.render_markdown").opts
+        end,
+        config = function(_, opts)
+          require("render-markdown").setup(opts)
+          require("configs.render_markdown").after_setup()
+        end,
       },
     },
   },

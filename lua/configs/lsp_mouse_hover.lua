@@ -5,6 +5,7 @@ local ns = vim.api.nvim_create_namespace "lsp_mouse_hover"
 local timer --- @type uv.uv_timer_t?
 local hover_win --- @type integer?
 local last_ident --- @type string?
+local dismissed_ident --- @type string?
 local request_id = 0
 
 local function close_hover(buf)
@@ -15,6 +16,23 @@ local function close_hover(buf)
   if buf and vim.api.nvim_buf_is_valid(buf) then
     vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
   end
+end
+
+local function hover_open()
+  return hover_win and vim.api.nvim_win_is_valid(hover_win)
+end
+
+local function dismiss_hover()
+  if not hover_open() then
+    return false
+  end
+  dismissed_ident = last_ident
+  request_id = request_id + 1
+  if timer then
+    timer:stop()
+  end
+  close_hover()
+  return true
 end
 
 local function ident_at(buf, line, col)
@@ -89,9 +107,14 @@ local function show_hover()
   if ident == "" or ident:match ":%s*$" then
     close_hover(buf)
     last_ident = nil
+    dismissed_ident = nil
     return
   end
-  if ident == last_ident and hover_win and vim.api.nvim_win_is_valid(hover_win) then
+  if ident == dismissed_ident then
+    return
+  end
+  dismissed_ident = nil
+  if ident == last_ident and hover_open() then
     return
   end
 
@@ -152,3 +175,17 @@ vim.keymap.set({ "n", "i", "v" }, "<MouseMove>", schedule_hover, {
   silent = true,
   desc = "LSP mouse hover",
 })
+
+-- NvChad 随后会把 n 模式 <Esc> 绑成 noh，keymap 会被盖掉。
+-- on_key 看实际按键，不依赖映射；Esc 仍会走 noh。
+local key_ns = vim.api.nvim_create_namespace "lsp_mouse_hover_keys"
+pcall(vim.on_key, nil, key_ns)
+vim.on_key(function(_, typed)
+  if typed == vim.keycode "<Esc>" then
+    dismiss_hover()
+  end
+end, key_ns)
+
+return {
+  dismiss = dismiss_hover,
+}

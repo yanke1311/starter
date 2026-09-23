@@ -8,7 +8,13 @@ pcall(vim.keymap.del, "n", "<tab>")
 
 local map = vim.keymap.set
 
-map("n", ";", ":", { desc = "CMD enter command mode" })
+-- 叠在 NvChad 的 noh 上：有鼠标 hover 浮窗时 Esc 一并关掉。
+map("n", "<Esc>", function()
+  vim.cmd.nohlsearch()
+  require("configs.lsp_mouse_hover").dismiss()
+end, { desc = "Clear highlights and hover" })
+
+-- 不要映射 n 模式的 `;` → `:`，否则会抢走 f/t/F/T 之后的 `;` 重复、`/` 反向重复。
 map("i", "jk", "<ESC>")
 
 map("n", "<F5>", "<cmd>CMakeRun<CR>", { desc = "cmake run" })
@@ -45,6 +51,10 @@ end, { desc = "Search selection" })
 map("x", "#", function()
   visual_star(true)
 end, { desc = "Search selection backward" })
+
+-- NvChad 默认 <C-l> 是切右侧窗口；改成清屏：关掉 */#// 高亮并 redraw。
+-- 切窗仍用 <C-w>l。
+map("n", "<C-l>", "<cmd>nohlsearch<CR><C-l>", { desc = "Clear search highlight" })
 
 -- 对齐 VSCodeVim / scopelet
 map("n", "<leader>ff", function()
@@ -100,11 +110,15 @@ end, { desc = "Git blame line" })
 
 map("n", "<leader>gB", "<cmd>Gitsigns toggle_current_line_blame<CR>", { desc = "Git toggle line blame" })
 
+local gitdiff = require "configs.gitdiff"
+
 local function close_gitsigns_diff()
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
     local name = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win))
     if name:find("^gitsigns://", 1) then
       pcall(vim.api.nvim_win_close, win, false)
+    else
+      gitdiff.clear_win(win)
     end
   end
   vim.cmd.diffoff()
@@ -117,6 +131,7 @@ map("n", "<leader>gd", function()
     return
   end
   require("gitsigns").diffthis()
+  vim.schedule(gitdiff.style_windows)
 end, { desc = "Git diff this" })
 
 vim.api.nvim_create_autocmd("WinClosed", {
@@ -132,6 +147,7 @@ vim.api.nvim_create_autocmd("WinClosed", {
           return
         end
       end
+      gitdiff.clear_win(win)
       vim.cmd.diffoff()
     end)
   end,

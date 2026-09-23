@@ -23,6 +23,7 @@ M.base46 = {
 	theme = "catppuccin-latte",
       transparency = false,
       theme_toggle = { "catppuccin-latte", "catppuccin" },
+	integrations = { "render-markdown" },
 
 	hl_override = {
 		TelescopeMatching = { fg = "orange", bold = true, bg = "NONE" },
@@ -37,6 +38,17 @@ M.base46 = {
 		RainbowDelimiterGreen = { fg = "green" },
 		RainbowDelimiterViolet = { fg = "purple" },
 		RainbowDelimiterCyan = { fg = "teal" },
+		RenderMarkdownCode = { bg = "one_bg2" },
+		RenderMarkdownCodeBorder = { link = "RenderMarkdownCode" },
+		RenderMarkdownCodeInline = { bg = "one_bg2", fg = "red" },
+		RenderMarkdownBullet = { fg = "grey_fg" },
+		RenderMarkdownH1 = { fg = "red", bold = true },
+		RenderMarkdownH2 = { fg = "orange", bold = true },
+		RenderMarkdownH3 = { fg = "yellow", bold = true },
+		RenderMarkdownQuote1 = { fg = "nord_blue" },
+		TreesitterContext = { bg = "one_bg" },
+		TreesitterContextLineNumber = { bg = "one_bg", fg = "grey" },
+		TreesitterContextSeparator = { fg = "light_grey", bg = "one_bg" },
 	},
 }
 

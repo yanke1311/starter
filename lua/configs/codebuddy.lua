@@ -42,16 +42,67 @@ function M.select_mode()
   end)
 end
 
+local INPUT_HINT = "%#Comment# <CR>提交  <S-CR>换行"
+
+local function apply_input_win_opts(buf)
+  for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+    if vim.api.nvim_win_is_valid(win) then
+      vim.wo[win].wrap = true
+      vim.wo[win].linebreak = true
+      vim.wo[win].breakindent = true
+      vim.wo[win].scrolloff = 1
+    end
+  end
+end
+
+local function append_submit_hint(win)
+  if not vim.api.nvim_win_is_valid(win) then
+    return
+  end
+  local cur = vim.wo[win].winbar or ""
+  if cur:find("提交", 1, true) then
+    return
+  end
+  vim.wo[win].winbar = cur .. "%=" .. INPUT_HINT
+end
+
 function M.after_setup()
-  local render = require "avante.history.render"
-  local orig = render.message_to_lines
-  function render.message_to_lines(message, messages, expanded)
-    local ok, helpers = pcall(require, "avante.history.helpers")
-    if ok and helpers.is_thinking_message(message) then
+  -- 隐藏 thinking 气泡；找不到接口就跳过，避免 Avante 升级直接报错。
+  pcall(function()
+    local render = require "avante.history.render"
+    local orig = render.message_to_lines
+    if type(orig) ~= "function" then
+      return
+    end
+    function render.message_to_lines(message, messages, expanded)
+      local ok, helpers = pcall(require, "avante.history.helpers")
+      if ok and helpers.is_thinking_message and helpers.is_thinking_message(message) then
+        return {}
+      end
+      local ran, result = pcall(orig, message, messages, expanded)
+      if ran then
+        return result
+      end
       return {}
     end
-    return orig(message, messages, expanded)
-  end
+  end)
+
+  -- 关掉默认浮层 hint（会盖住输入）。提交说明接到 Avante 自己的 winbar 右侧，不覆盖标题。
+  pcall(function()
+    local Sidebar = require "avante.sidebar"
+    function Sidebar:show_input_hint() end
+    local orig_header = Sidebar.render_header
+    if type(orig_header) ~= "function" then
+      return
+    end
+    function Sidebar:render_header(winid, bufnr, header_text, hl, reverse_hl, opts)
+      orig_header(self, winid, bufnr, header_text, hl, reverse_hl, opts)
+      local input = self.containers and self.containers.input
+      if input and winid == input.winid then
+        append_submit_hint(winid)
+      end
+    end
+  end)
 
   vim.api.nvim_create_autocmd("FileType", {
     pattern = "AvanteInput",
@@ -59,6 +110,15 @@ function M.after_setup()
       local buf = ev.buf
       vim.keymap.set("n", "<leader>cM", M.select_model, { buffer = buf, desc = "CodeBuddy 切换模型" })
       vim.keymap.set("n", "<leader>cP", M.select_mode, { buffer = buf, desc = "CodeBuddy 切换模式" })
+      -- Enter 提交后，Shift-Enter 换行（Kitty 键盘协议下 <S-CR> 能和 Enter 区分）
+      vim.keymap.set("i", "<S-CR>", "<C-j>", { buffer = buf, desc = "Avante 换行" })
+      apply_input_win_opts(buf)
+      vim.api.nvim_create_autocmd("BufWinEnter", {
+        buffer = buf,
+        callback = function()
+          apply_input_win_opts(buf)
+        end,
+      })
     end,
   })
 end
@@ -77,6 +137,12 @@ function M.opts()
     auto_suggestions_provider = nil,
     selector = { provider = "telescope" },
     input = { provider = "native" },
+    mappings = {
+      submit = {
+        normal = "<CR>",
+        insert = "<CR>",
+      },
+    },
     behaviour = {
       auto_suggestions = false,
       auto_set_keymaps = false,
@@ -103,7 +169,7 @@ function M.opts()
       },
       input = {
         prefix = "> ",
-        height = 4,
+        height = 8,
       },
       selected_files = {
         height = 3,
@@ -134,8 +200,56 @@ function M.opts()
   }
 end
 
+local function sidebar_has_win(sidebar, win)
+  if not sidebar or not sidebar.containers then
+    return false
+  end
+  for _, container in pairs(sidebar.containers) do
+    if container and container.winid == win then
+      return true
+    end
+  end
+  return false
+end
+
+local function focus_input()
+  vim.cmd "stopinsert"
+  -- Avante 打开 ACP 侧栏时会先 focus 结果窗、再空 submit；稍后再抢输入栏。
+  vim.defer_fn(function()
+    local sidebar = require("avante").get()
+    if not sidebar or not sidebar.is_open or not sidebar:is_open() then
+      return
+    end
+    if sidebar.focus_input then
+      sidebar:focus_input()
+    end
+    local input = sidebar.containers and sidebar.containers.input
+    if not input or not input.winid or not vim.api.nvim_win_is_valid(input.winid) then
+      return
+    end
+    vim.api.nvim_set_current_win(input.winid)
+    vim.cmd "startinsert!"
+  end, 80)
+end
+
 function M.toggle()
-  require("avante").toggle()
+  local avante = require "avante"
+  local sidebar = avante.get()
+  if sidebar and sidebar:is_open() then
+    if sidebar_has_win(sidebar, vim.api.nvim_get_current_win()) then
+      -- 输入栏里是插入模式；关掉后焦点回到代码窗，不能把 insert 带回去。
+      vim.cmd "stopinsert"
+      avante.toggle()
+      vim.schedule(function()
+        vim.cmd "stopinsert"
+      end)
+      return
+    end
+    focus_input()
+    return
+  end
+  avante.open_sidebar {}
+  focus_input()
 end
 
 function M.inline()
