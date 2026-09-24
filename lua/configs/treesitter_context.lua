@@ -1,4 +1,5 @@
--- 类似 VS Code sticky scroll：光标还在函数体内、签名滚出视口时钉在窗口顶部。
+-- 类似 VS Code sticky scroll：按窗口第一行算，被挡住的最外层函数签名钉在顶部。
+-- cursor 模式只钉光标所在函数。
 
 return {
   enable = true,
@@ -7,7 +8,7 @@ return {
   line_numbers = true,
   multiline_threshold = 4,
   trim_scope = "outer",
-  mode = "cursor",
+  mode = "topline",
   separator = "─",
   zindex = 20,
 }

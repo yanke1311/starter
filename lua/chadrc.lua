@@ -20,17 +20,33 @@ local M = {}
 -- local theme = is_dark_mode() and "onedark" or "one_light"
 
 M.base46 = {
-	theme = "catppuccin-latte",
+	theme = "eye-care-owl-noitalic-light",
       transparency = false,
-      theme_toggle = { "catppuccin-latte", "catppuccin" },
+	  theme_toggle = { "eye-care-owl-noitalic-light", "catppuccin" },
 	integrations = { "render-markdown" },
 
 	hl_override = {
+		CursorLine = { bg = "black2" },
+		LspCodeLens = { fg = "#007ACC", underline = true },
+		NvimTreeCursorLine = { bg = "#E0E7EA" },
+		-- VS Code Light+ 的 editor.selectionBackground
+		Visual = { bg = "#ADD6FF" },
 		TelescopeMatching = { fg = "orange", bold = true, bg = "NONE" },
 		TelescopeSelection = { bg = "one_bg3", bold = true },
 	},
 	hl_add = {
-		TelescopeResultsComment = { fg = "light_grey" },
+		-- 已 stage：绿。未 stage（含未跟踪）：红。
+		NvimTreeGitStagedIcon = { fg = "#1FA84A" },
+		NvimTreeGitFileStagedHL = { fg = "#1FA84A" },
+		NvimTreeGitFolderStagedHL = { fg = "#1FA84A" },
+		NvimTreeGitDirtyIcon = { fg = "#E64D49" },
+		NvimTreeGitFileDirtyHL = { fg = "#E64D49" },
+		NvimTreeGitFolderDirtyHL = { fg = "#E64D49" },
+		NvimTreeGitNewIcon = { fg = "#E64D49" },
+		NvimTreeGitFileNewHL = { fg = "#E64D49" },
+		NvimTreeGitFolderNewHL = { fg = "#E64D49" },
+		TelescopeResultsComment = { fg = "cyan" },
+		TelescopeGrepPath = { fg = "cyan" },
 		RainbowDelimiterRed = { fg = "red" },
 		RainbowDelimiterYellow = { fg = "yellow" },
 		RainbowDelimiterBlue = { fg = "nord_blue" },
@@ -50,6 +66,10 @@ M.base46 = {
 		TreesitterContextLineNumber = { bg = "one_bg", fg = "grey" },
 		TreesitterContextSeparator = { fg = "light_grey", bg = "one_bg" },
 	},
+}
+
+M.term = {
+  float = { width = 0.9, height = 0.8, row = 0.1, col = 0.05 },
 }
 
 -- M.nvdash = { load_on_startup = true }
