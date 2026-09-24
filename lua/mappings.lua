@@ -8,6 +8,19 @@ pcall(vim.keymap.del, "n", "<tab>")
 
 local map = vim.keymap.set
 
+local function toggle_horizontal_term()
+  require("nvchad.term").toggle { pos = "sp", id = "htoggleTerm" }
+end
+
+local function toggle_float_term()
+  require("nvchad.term").toggle { pos = "float", id = "floatTerm", winopts = { winblend = 20 } }
+end
+
+map({ "n", "t" }, "<C-`>", toggle_horizontal_term, { desc = "Toggle horizontal terminal" })
+map("n", "<leader>tt", toggle_horizontal_term, { desc = "Toggle horizontal terminal" })
+map({ "n", "t" }, "<A-i>", toggle_float_term, { desc = "Toggle floating terminal" })
+map("n", "<leader>tf", toggle_float_term, { desc = "Toggle floating terminal" })
+
 -- 叠在 NvChad 的 noh 上：有鼠标 hover 浮窗时 Esc 一并关掉。
 map("n", "<Esc>", function()
   vim.cmd.nohlsearch()
@@ -17,9 +30,13 @@ end, { desc = "Clear highlights and hover" })
 -- 不要映射 n 模式的 `;` → `:`，否则会抢走 f/t/F/T 之后的 `;` 重复、`/` 反向重复。
 map("i", "jk", "<ESC>")
 
-map("n", "<F5>", "<cmd>CMakeRun<CR>", { desc = "cmake run" })
-map("n", "<S-l>", "<cmd>bnext<CR>", { desc = "tab next" })
-map("n", "<S-h>", "<cmd>bprevious<CR>", { desc = "tab next" })
+-- 调试/运行快捷键统一由 configs.dap.keys 声明。
+map("n", "<S-l>", function()
+  require("nvchad.tabufline").next()
+end, { desc = "tab next" })
+map("n", "<S-h>", function()
+  require("nvchad.tabufline").prev()
+end, { desc = "tab prev" })
 
 -- meno --
 -- nvim-tree-lua
@@ -29,19 +46,13 @@ map("n", "<S-h>", "<cmd>bprevious<CR>", { desc = "tab next" })
 map("n", "<M-n>", "<cmd>NvimTreeToggle<CR>", { desc = "NvimTreeToggle" })
 map("n", "<Leader>q", "<cmd>cclose<CR><cmd>lclose<CR>", { desc = "close quickfix window" })
 map("n", "<leader>cl", vim.lsp.codelens.run, { desc = "Run CodeLens" })
-map({ "n", "v" }, "<leader>cM", function()
-  require("configs.codebuddy").select_model()
-end, { desc = "CodeBuddy 切换模型" })
-map({ "n", "v" }, "<leader>cP", function()
-  require("configs.codebuddy").select_mode()
-end, { desc = "CodeBuddy 切换模式" })
 
 local function visual_star(backward)
   vim.cmd 'normal! "vy'
   local pat = [[\V]] .. vim.fn.escape(vim.fn.getreg "v", [[\]]):gsub("\n", [[\n]])
   vim.fn.setreg("/", pat)
   vim.v.searchforward = backward and 0 or 1
-  vim.cmd("normal! " .. (backward and "N" or "n"))
+  vim.cmd "normal! n" -- searchforward 已决定方向，N 会再次反转。
   vim.opt.hlsearch = true
 end
 
@@ -66,6 +77,10 @@ end, { desc = "telescope live grep" })
 map("n", "<leader>fH", function()
   require("configs.search").prompt_history()
 end, { desc = "telescope prompt history" })
+map("n", "<leader>fp", function()
+  require("configs.search").projects()
+end, { desc = "telescope projects" })
+map("n", "<leader>fu", "<cmd>Telescope undo<CR>", { desc = "telescope undo" })
 map("n", "<leader>fw", "<cmd>Telescope lsp_references<CR>", { desc = "telescope LSP references" })
 map("n", "<leader>fs", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "telescope document symbols" })
 map("n", "<leader>ma", "<cmd>Telescope marks<CR>", { desc = "telescope marks" })
@@ -84,13 +99,21 @@ map("v", "<leader>fG", function()
   }
 end, { desc = "telescope grep selection" })
 --gitsigns--
-map("n", "]h", function()
-  require("gitsigns").nav_hunk "next"
-end, { desc = "Git next hunk" })
+-- gitsigns 不再默认映射 ]c/[c。普通 buffer 里它们是 Vim 的 diff 跳转，没有 diff 时没有效果。
+local function hunk_nav(dir, diff_key)
+  return function()
+    if vim.wo.diff then
+      vim.cmd.normal { diff_key, bang = true }
+      return
+    end
+    require("gitsigns").nav_hunk(dir)
+  end
+end
 
-map("n", "[h", function()
-  require("gitsigns").nav_hunk "prev"
-end, { desc = "Git prev hunk" })
+map("n", "]c", hunk_nav("next", "]c"), { desc = "Git next hunk" })
+map("n", "[c", hunk_nav("prev", "[c"), { desc = "Git prev hunk" })
+map("n", "]h", hunk_nav("next", "]c"), { desc = "Git next hunk" })
+map("n", "[h", hunk_nav("prev", "[c"), { desc = "Git prev hunk" })
 
 map("n", "<leader>gp", function()
   require("gitsigns").preview_hunk()
@@ -156,5 +179,9 @@ vim.api.nvim_create_autocmd("WinClosed", {
 map("n", "<leader>gq", function()
   require("gitsigns").setqflist()
 end, { desc = "Git hunks to quickfix" })
+
+map("n", "<leader>gR", function()
+  require("configs.search").git_repos()
+end, { desc = "Git repos under cwd" })
 
 -- map({ "n", "i", "v" }, "<C-s>", "<cmd> w <cr>")

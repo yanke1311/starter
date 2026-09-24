@@ -192,8 +192,11 @@ function M.opts()
       codebuddy = {
         command = acp.command,
         args = acp.args,
+        -- Avante uv.spawn 传入 env 会整表替换进程环境，必须带上 HOME，否则 WSL 读不到 ~/.codebuddy 登录态
         env = cli.child_env {
+          HOME = vim.env.HOME or vim.fn.expand "~",
           CODEBUDDY_INTERNET_ENVIRONMENT = "internal",
+          NO_COLOR = "1",
         },
       },
     },
