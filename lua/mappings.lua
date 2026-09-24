@@ -8,6 +8,164 @@ pcall(vim.keymap.del, "n", "<tab>")
 
 local map = vim.keymap.set
 
+local function cmake_terminal_wins()
+  local wins = {}
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "cmake_tools_terminal" or vim.bo[buf].buftype == "terminal" and vim.api.nvim_buf_get_name(buf):find("CMakeTools", 1, true) then
+      wins[#wins + 1] = win
+    end
+  end
+  return wins
+end
+
+local function toggle_horizontal_term()
+  local cmake_wins = cmake_terminal_wins()
+  if #cmake_wins > 0 then
+    for _, win in ipairs(cmake_wins) do
+      if vim.api.nvim_win_is_valid(win) then
+        vim.api.nvim_win_close(win, false)
+      end
+    end
+    return
+  end
+  require("nvchad.term").toggle { pos = "sp", id = "htoggleTerm" }
+end
+
+local panel_stash = {}
+
+local function is_terminal_buf(buf)
+  if vim.bo[buf].buftype == "terminal" or vim.bo[buf].filetype == "cmake_tools_terminal" then
+    return true
+  end
+  return vim.api.nvim_buf_get_name(buf):find("CMakeTools", 1, true) ~= nil
+end
+
+local function tool_kind(buf)
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name:find("FeedIndex", 1, true) or name:find("FeedEntry", 1, true) then
+    return "feed"
+  end
+  local ft = vim.bo[buf].filetype
+  local bt = vim.bo[buf].buftype
+  if bt == "quickfix" then
+    return "qf"
+  end
+  if ft == "NvimTree" or ft == "dap-view" or ft == "dapui_watches" or ft == "dapui_stacks" or ft == "dapui_scopes" then
+    return "tool"
+  end
+end
+
+local function code_win(exclude)
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if win ~= exclude and vim.api.nvim_win_get_config(win).relative == "" then
+      local buf = vim.api.nvim_win_get_buf(win)
+      if not is_terminal_buf(buf) and not tool_kind(buf) then
+        return win
+      end
+    end
+  end
+end
+
+local function hide_tool_windows()
+  local current = vim.api.nvim_get_current_win()
+  local items = {}
+  local saw_feed = false
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.api.nvim_win_get_config(win).relative == "" then
+      local buf = vim.api.nvim_win_get_buf(win)
+      local kind = tool_kind(buf)
+      if kind == "feed" then
+        saw_feed = true
+      elseif kind then
+        items[#items + 1] = {
+          buf = buf,
+          view = vim.api.nvim_win_call(win, vim.fn.winsaveview),
+          height = vim.api.nvim_win_get_height(win),
+          focus = win == current,
+        }
+        vim.bo[buf].bufhidden = "hide"
+      end
+    end
+  end
+  if not saw_feed and #items == 0 then
+    return false
+  end
+  local home = code_win()
+  if home then
+    vim.api.nvim_set_current_win(home)
+  end
+  for _, item in ipairs(items) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      if vim.api.nvim_win_get_buf(win) == item.buf then
+        vim.api.nvim_win_hide(win)
+        break
+      end
+    end
+  end
+  if saw_feed then
+    require("configs.feed").hide()
+  end
+  panel_stash = items
+  return true
+end
+
+local function show_tool_windows()
+  local feed = require "configs.feed"
+  local restored = false
+  local focus_win
+  if #panel_stash > 0 then
+    local parent = code_win() or vim.api.nvim_get_current_win()
+    for _, item in ipairs(panel_stash) do
+      if vim.api.nvim_buf_is_valid(item.buf) then
+        local win = vim.api.nvim_open_win(item.buf, false, {
+          split = "below",
+          win = parent,
+          height = item.height or 12,
+        })
+        vim.api.nvim_win_call(win, function()
+          if item.view then
+            vim.fn.winrestview(item.view)
+          end
+        end)
+        if item.focus then
+          focus_win = win
+        end
+        restored = true
+      end
+    end
+    panel_stash = {}
+  end
+  if feed.hidden_valid() then
+    feed.show()
+    restored = true
+    focus_win = vim.api.nvim_get_current_win()
+  end
+  if focus_win and vim.api.nvim_win_is_valid(focus_win) then
+    vim.api.nvim_set_current_win(focus_win)
+  end
+  return restored
+end
+
+local function toggle_panel()
+  if hide_tool_windows() then
+    return
+  end
+  if show_tool_windows() then
+    return
+  end
+  toggle_horizontal_term()
+end
+
+local function toggle_float_term()
+  require("nvchad.term").toggle { pos = "float", id = "floatTerm", winopts = { winblend = 20 } }
+end
+
+map({ "n", "t" }, "<C-`>", toggle_panel, { desc = "藏起工具窗口，否则开关终端" })
+map("n", "<leader>tt", toggle_horizontal_term, { desc = "Toggle horizontal terminal" })
+map({ "n", "t" }, "<A-i>", toggle_float_term, { desc = "Toggle floating terminal" })
+map("n", "<leader>tf", toggle_float_term, { desc = "Toggle floating terminal" })
+
 -- 叠在 NvChad 的 noh 上：有鼠标 hover 浮窗时 Esc 一并关掉。
 map("n", "<Esc>", function()
   vim.cmd.nohlsearch()
@@ -17,9 +175,20 @@ end, { desc = "Clear highlights and hover" })
 -- 不要映射 n 模式的 `;` → `:`，否则会抢走 f/t/F/T 之后的 `;` 重复、`/` 反向重复。
 map("i", "jk", "<ESC>")
 
-map("n", "<F5>", "<cmd>CMakeRun<CR>", { desc = "cmake run" })
-map("n", "<S-l>", "<cmd>bnext<CR>", { desc = "tab next" })
-map("n", "<S-h>", "<cmd>bprevious<CR>", { desc = "tab next" })
+-- 调试/运行快捷键统一由 configs.dap.keys 声明。
+map("n", "<S-l>", function()
+  require("nvchad.tabufline").next()
+end, { desc = "tab next" })
+map("n", "<S-h>", function()
+  require("nvchad.tabufline").prev()
+end, { desc = "tab prev" })
+
+-- ,x 关的是标签栏里的一个 buffer。Diffview 这类占的是整个标签页。
+map("n", "<leader>X", function()
+  if vim.fn.tabpagenr "$" > 1 then
+    vim.cmd.tabclose()
+  end
+end, { desc = "close tab" })
 
 -- meno --
 -- nvim-tree-lua
@@ -29,19 +198,13 @@ map("n", "<S-h>", "<cmd>bprevious<CR>", { desc = "tab next" })
 map("n", "<M-n>", "<cmd>NvimTreeToggle<CR>", { desc = "NvimTreeToggle" })
 map("n", "<Leader>q", "<cmd>cclose<CR><cmd>lclose<CR>", { desc = "close quickfix window" })
 map("n", "<leader>cl", vim.lsp.codelens.run, { desc = "Run CodeLens" })
-map({ "n", "v" }, "<leader>cM", function()
-  require("configs.codebuddy").select_model()
-end, { desc = "CodeBuddy 切换模型" })
-map({ "n", "v" }, "<leader>cP", function()
-  require("configs.codebuddy").select_mode()
-end, { desc = "CodeBuddy 切换模式" })
 
 local function visual_star(backward)
   vim.cmd 'normal! "vy'
   local pat = [[\V]] .. vim.fn.escape(vim.fn.getreg "v", [[\]]):gsub("\n", [[\n]])
   vim.fn.setreg("/", pat)
   vim.v.searchforward = backward and 0 or 1
-  vim.cmd("normal! " .. (backward and "N" or "n"))
+  vim.cmd "normal! n" -- searchforward 已决定方向，N 会再次反转。
   vim.opt.hlsearch = true
 end
 
@@ -66,6 +229,17 @@ end, { desc = "telescope live grep" })
 map("n", "<leader>fH", function()
   require("configs.search").prompt_history()
 end, { desc = "telescope prompt history" })
+map("n", "<leader>fp", function()
+  require("configs.search").projects()
+end, { desc = "telescope projects" })
+map("n", "<leader>fu", "<cmd>Telescope undo<CR>", { desc = "telescope undo" })
+map("n", "<leader>fj", "<cmd>Telescope jumplist<CR>", { desc = "telescope jumplist" })
+map("n", "<leader>fd", function()
+  require("configs.feed").pick_source()
+end, { desc = "feed news" })
+map("n", "<leader>ft", function()
+  require("configs.feed").toggle()
+end, { desc = "feed 藏起或恢复" })
 map("n", "<leader>fw", "<cmd>Telescope lsp_references<CR>", { desc = "telescope LSP references" })
 map("n", "<leader>fs", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "telescope document symbols" })
 map("n", "<leader>ma", "<cmd>Telescope marks<CR>", { desc = "telescope marks" })
@@ -84,13 +258,21 @@ map("v", "<leader>fG", function()
   }
 end, { desc = "telescope grep selection" })
 --gitsigns--
-map("n", "]h", function()
-  require("gitsigns").nav_hunk "next"
-end, { desc = "Git next hunk" })
+-- gitsigns 不再默认映射 ]c/[c。普通 buffer 里它们是 Vim 的 diff 跳转，没有 diff 时没有效果。
+local function hunk_nav(dir, diff_key)
+  return function()
+    if vim.wo.diff then
+      vim.cmd.normal { diff_key, bang = true }
+      return
+    end
+    require("gitsigns").nav_hunk(dir)
+  end
+end
 
-map("n", "[h", function()
-  require("gitsigns").nav_hunk "prev"
-end, { desc = "Git prev hunk" })
+map("n", "]c", hunk_nav("next", "]c"), { desc = "Git next hunk" })
+map("n", "[c", hunk_nav("prev", "[c"), { desc = "Git prev hunk" })
+map("n", "]h", hunk_nav("next", "]c"), { desc = "Git next hunk" })
+map("n", "[h", hunk_nav("prev", "[c"), { desc = "Git prev hunk" })
 
 map("n", "<leader>gp", function()
   require("gitsigns").preview_hunk()
@@ -156,5 +338,9 @@ vim.api.nvim_create_autocmd("WinClosed", {
 map("n", "<leader>gq", function()
   require("gitsigns").setqflist()
 end, { desc = "Git hunks to quickfix" })
+
+map("n", "<leader>gR", function()
+  require("configs.search").git_repos()
+end, { desc = "Git repos under cwd" })
 
 -- map({ "n", "i", "v" }, "<C-s>", "<cmd> w <cr>")

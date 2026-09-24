@@ -39,6 +39,39 @@ function M.clear_win(win)
   end
 end
 
+--- kind: "diff" 工作区全部改动，"history" 仓库历史，"file_history" 当前文件历史。
+function M.toggle_diffview(kind, open_cmd)
+  local ok, lib = pcall(require, "diffview.lib")
+  local view = ok and lib.get_current_view() or nil
+  local same = false
+  if view and view.class then
+    local name = view.class.__name
+    local single = view.panel and view.panel.single_file
+    if kind == "diff" and name == "DiffView" then
+      same = true
+    elseif kind == "history" and name == "FileHistoryView" and not single then
+      same = true
+    elseif kind == "file_history" and name == "FileHistoryView" and single then
+      same = true
+    end
+  end
+  if same then
+    vim.cmd "DiffviewClose"
+  else
+    vim.cmd(open_cmd)
+  end
+end
+
+function M.style_diffview_window(_, win, ctx)
+  if not ctx.layout_name:match("^diff2") then return end
+  M.apply_highlights()
+  local old_side = ctx.symbol == "a"
+  local line_hl = old_side and "DiffDelete" or "DiffAdd"
+  local text_hl = old_side and "GitDiffDeleteText" or "GitDiffAddText"
+  vim.wo[win].foldenable = false
+  vim.wo[win].winhighlight = "DiffAdd:" .. line_hl .. ",DiffDelete:Normal,DiffChange:" .. line_hl .. ",DiffText:" .. text_hl
+end
+
 function M.setup()
   vim.opt.diffopt:append "algorithm:histogram"
   vim.opt.diffopt:append "context:999"
