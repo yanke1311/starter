@@ -5,8 +5,6 @@ return {
   current_only = true,
   winblend = 10,
   zindex = 40,
-  -- 插件文档有 width，实际宽度 = 1 列滑块 + 未 overlap 的 sign 列（约 2 格）
-  width = 4,
   excluded_filetypes = {
     "NvimTree",
     "oil",
@@ -41,6 +39,12 @@ return {
     gitsigns = {
       enable = true,
       overlap = false,
+      -- 使用实心块增强 git 标记的可见性。
+      signs = {
+        add = "█",
+        change = "█",
+        delete = "▄",
+      },
     },
     marks = { enable = true, show_builtins = false },
     quickfix = { enable = true },
