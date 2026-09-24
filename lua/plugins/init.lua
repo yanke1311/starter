@@ -128,6 +128,7 @@ return {
         vim.api.nvim_set_hl(0, "TelescopeMatching", { fg = colors.orange, bold = true, bg = "NONE" })
         vim.api.nvim_set_hl(0, "TelescopeSelection", { bg = colors.one_bg3, bold = true })
         vim.api.nvim_set_hl(0, "TelescopeResultsComment", { fg = colors.light_grey })
+        vim.api.nvim_set_hl(0, "TelescopeResultsFilename", { fg = colors.nord_blue, bold = true })
       end
 
       apply_telescope_hl()
@@ -174,7 +175,79 @@ return {
           ["<Esc>"] = close_saving,
         },
       })
+      -- 全局 cd：ff/fg/gopls 跟仓库走；nvim-tree 同步根。回车后开自己的 find_files，保留 name;path。
+      -- 官方 <C-A> 在终端里等于 <C-a>（加 git 根），Ctrl+Shift+A 到不了 Neovim。
+      opts.extensions = opts.extensions or {}
+      opts.extensions.project = {
+        ignore_missing_dirs = true,
+        order_by = "recent",
+        search_by = { "title", "path" },
+        sync_with_nvim_tree = true,
+        cd_scope = { "global" },
+        on_project_selected = function(prompt_bufnr)
+          require("telescope._extensions.project.actions").change_working_directory(prompt_bufnr, false)
+          require("configs.search").find_files()
+        end,
+        mappings = {
+          i = {
+            ["<C-y>"] = function(prompt_bufnr)
+              require("telescope._extensions.project.actions").add_project_cwd(prompt_bufnr)
+            end,
+            ["<C-S-a>"] = function(prompt_bufnr)
+              require("telescope._extensions.project.actions").add_project_cwd(prompt_bufnr)
+            end,
+          },
+        },
+      }
+      -- 回车还原到该状态；默认回车是 yank，容易误触。
+      opts.extensions.undo = {
+        use_delta = true,
+        side_by_side = false,
+        mappings = {
+          i = {
+            ["<CR>"] = function(bufnr)
+              return require("telescope-undo.actions").restore(bufnr)
+            end,
+          },
+          n = {
+            ["<CR>"] = function(bufnr)
+              return require("telescope-undo.actions").restore(bufnr)
+            end,
+          },
+        },
+      }
       return opts
+    end,
+  },
+  {
+    "nvim-telescope/telescope-project.nvim",
+    dependencies = { "nvim-telescope/telescope.nvim" },
+    event = "VeryLazy",
+    config = function()
+      require("telescope").load_extension "project"
+    end,
+  },
+  {
+    "debugloop/telescope-undo.nvim",
+    dependencies = { "nvim-telescope/telescope.nvim" },
+    event = "VeryLazy",
+    config = function()
+      require("telescope").load_extension "undo"
+    end,
+  },
+  {
+    "sindrets/diffview.nvim",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewFileHistory" },
+    keys = {
+      { "<leader>gD", "<cmd>DiffviewOpen<cr>", desc = "Git diff all files" },
+      { "<leader>gc", "<cmd>DiffviewFileHistory<cr>", desc = "Git repo history" },
+      { "<leader>gH", "<cmd>DiffviewFileHistory %<cr>", desc = "Git file history" },
+    },
+    config = function()
+      require("diffview").setup {
+        hooks = { diff_buf_win_enter = require("configs.gitdiff").style_diffview_window },
+      }
     end,
   },
 
@@ -186,6 +259,26 @@ return {
       opts.completion.list = vim.tbl_deep_extend("force", opts.completion.list or {}, {
         -- 菜单弹出时不预选第一项，没动手选时回车只换行
         selection = { preselect = false, auto_insert = false },
+      })
+      opts.keymap = vim.tbl_deep_extend("force", opts.keymap or {}, {
+        ["<Tab>"] = {
+          function(cmp)
+            if cmp.snippet_active() then
+              return cmp.snippet_forward()
+            end
+            return cmp.select_next()
+          end,
+          "fallback",
+        },
+        ["<S-Tab>"] = {
+          function(cmp)
+            if cmp.snippet_active() then
+              return cmp.snippet_backward()
+            end
+            return cmp.select_prev()
+          end,
+          "fallback",
+        },
       })
       opts.sources = opts.sources or {}
       opts.sources.providers = vim.tbl_deep_extend("force", opts.sources.providers or {}, {
@@ -257,22 +350,33 @@ return {
       local cb = require "configs.codebuddy"
       local nvi = { "n", "v", "i" }
       local nv = { "n", "v" }
-      return {
-        -- VS Code CodeBuddy 插件 / IDE（Mac）
-        { "<D-C-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
-        { "<C-D-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
-        { "<D-i>", cb.inline, mode = nvi, desc = "CodeBuddy 内联对话" },
-        { "<D-C-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
-        { "<C-D-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+      local keys = {
         { "<M-S-x>", cb.explain, mode = nv, desc = "CodeBuddy 解释代码" },
         { "<M-S-y>", cb.fix, mode = nv, desc = "CodeBuddy 修复代码" },
         { "<M-S-m>", cb.comment, mode = nv, desc = "CodeBuddy 添加注释" },
         { "<M-S-t>", cb.tests, mode = nv, desc = "CodeBuddy 生成测试" },
-        -- 终端里 Cmd 经常到不了 nvim
         { "<leader>cc", cb.toggle, desc = "CodeBuddy 侧边栏对话" },
         { "<leader>cM", cb.select_model, mode = { "n", "v" }, desc = "CodeBuddy 切换模型" },
         { "<leader>cP", cb.select_mode, mode = { "n", "v" }, desc = "CodeBuddy 切换模式" },
       }
+      if vim.fn.has "mac" == 1 then
+        vim.list_extend(keys, {
+          { "<D-C-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
+          { "<C-D-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
+          { "<D-i>", cb.inline, mode = nvi, desc = "CodeBuddy 内联对话" },
+          { "<D-C-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+          { "<C-D-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+        })
+      else
+        -- VS Code CodeBuddy：Ctrl+Alt+I；修饰符顺序因终端而异
+        vim.list_extend(keys, {
+          { "<C-A-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
+          { "<M-C-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
+          { "<C-A-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+          { "<M-C-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+        })
+      end
+      return keys
     end,
     dependencies = {
       "nvim-lua/plenary.nvim",

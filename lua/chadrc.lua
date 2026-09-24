@@ -26,6 +26,7 @@ M.base46 = {
 	integrations = { "render-markdown" },
 
 	hl_override = {
+		CursorLine = { bg = "black2" },
 		TelescopeMatching = { fg = "orange", bold = true, bg = "NONE" },
 		TelescopeSelection = { bg = "one_bg3", bold = true },
 	},
@@ -50,6 +51,10 @@ M.base46 = {
 		TreesitterContextLineNumber = { bg = "one_bg", fg = "grey" },
 		TreesitterContextSeparator = { fg = "light_grey", bg = "one_bg" },
 	},
+}
+
+M.term = {
+  float = { width = 0.9, height = 0.8, row = 0.1, col = 0.05 },
 }
 
 -- M.nvdash = { load_on_startup = true }

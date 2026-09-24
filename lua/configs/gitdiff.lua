@@ -39,6 +39,16 @@ function M.clear_win(win)
   end
 end
 
+function M.style_diffview_window(_, win, ctx)
+  if not ctx.layout_name:match("^diff2") then return end
+  M.apply_highlights()
+  local old_side = ctx.symbol == "a"
+  local line_hl = old_side and "DiffDelete" or "DiffAdd"
+  local text_hl = old_side and "GitDiffDeleteText" or "GitDiffAddText"
+  vim.wo[win].foldenable = false
+  vim.wo[win].winhighlight = "DiffAdd:" .. line_hl .. ",DiffDelete:Normal,DiffChange:" .. line_hl .. ",DiffText:" .. text_hl
+end
+
 function M.setup()
   vim.opt.diffopt:append "algorithm:histogram"
   vim.opt.diffopt:append "context:999"
