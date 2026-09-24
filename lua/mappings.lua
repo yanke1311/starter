@@ -8,6 +8,19 @@ pcall(vim.keymap.del, "n", "<tab>")
 
 local map = vim.keymap.set
 
+local function toggle_horizontal_term()
+  require("nvchad.term").toggle { pos = "sp", id = "htoggleTerm" }
+end
+
+local function toggle_float_term()
+  require("nvchad.term").toggle { pos = "float", id = "floatTerm", winopts = { winblend = 20 } }
+end
+
+map({ "n", "t" }, "<C-`>", toggle_horizontal_term, { desc = "Toggle horizontal terminal" })
+map("n", "<leader>tt", toggle_horizontal_term, { desc = "Toggle horizontal terminal" })
+map({ "n", "t" }, "<A-i>", toggle_float_term, { desc = "Toggle floating terminal" })
+map("n", "<leader>tf", toggle_float_term, { desc = "Toggle floating terminal" })
+
 -- 叠在 NvChad 的 noh 上：有鼠标 hover 浮窗时 Esc 一并关掉。
 map("n", "<Esc>", function()
   vim.cmd.nohlsearch()
@@ -18,8 +31,12 @@ end, { desc = "Clear highlights and hover" })
 map("i", "jk", "<ESC>")
 
 map("n", "<F5>", "<cmd>CMakeRun<CR>", { desc = "cmake run" })
-map("n", "<S-l>", "<cmd>bnext<CR>", { desc = "tab next" })
-map("n", "<S-h>", "<cmd>bprevious<CR>", { desc = "tab next" })
+map("n", "<S-l>", function()
+  require("nvchad.tabufline").next()
+end, { desc = "tab next" })
+map("n", "<S-h>", function()
+  require("nvchad.tabufline").prev()
+end, { desc = "tab prev" })
 
 -- meno --
 -- nvim-tree-lua
@@ -66,6 +83,10 @@ end, { desc = "telescope live grep" })
 map("n", "<leader>fH", function()
   require("configs.search").prompt_history()
 end, { desc = "telescope prompt history" })
+map("n", "<leader>fp", function()
+  require("configs.search").projects()
+end, { desc = "telescope projects" })
+map("n", "<leader>fu", "<cmd>Telescope undo<CR>", { desc = "telescope undo" })
 map("n", "<leader>fw", "<cmd>Telescope lsp_references<CR>", { desc = "telescope LSP references" })
 map("n", "<leader>fs", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "telescope document symbols" })
 map("n", "<leader>ma", "<cmd>Telescope marks<CR>", { desc = "telescope marks" })
@@ -156,5 +177,9 @@ vim.api.nvim_create_autocmd("WinClosed", {
 map("n", "<leader>gq", function()
   require("gitsigns").setqflist()
 end, { desc = "Git hunks to quickfix" })
+
+map("n", "<leader>gR", function()
+  require("configs.search").git_repos()
+end, { desc = "Git repos under cwd" })
 
 -- map({ "n", "i", "v" }, "<C-s>", "<cmd> w <cr>")

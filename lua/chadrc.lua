@@ -20,16 +20,24 @@ local M = {}
 -- local theme = is_dark_mode() and "onedark" or "one_light"
 
 M.base46 = {
-	theme = "catppuccin-latte",
+	theme = "eye-care-owl-noitalic-light",
       transparency = false,
-      theme_toggle = { "catppuccin-latte", "catppuccin" },
+	  theme_toggle = { "eye-care-owl-noitalic-light", "catppuccin" },
 	integrations = { "render-markdown" },
 
 	hl_override = {
+		CursorLine = { bg = "black2" },
+		NvimTreeCursorLine = { bg = "#E0E7EA" },
 		TelescopeMatching = { fg = "orange", bold = true, bg = "NONE" },
 		TelescopeSelection = { bg = "one_bg3", bold = true },
 	},
 	hl_add = {
+		NvimTreeGitNewIcon = { fg = "#007100" },
+		NvimTreeGitFileNewHL = { fg = "#007100" },
+		NvimTreeGitFolderNewHL = { fg = "#007100" },
+		NvimTreeGitDirtyIcon = { fg = "#895503" },
+		NvimTreeGitFileDirtyHL = { fg = "#895503" },
+		NvimTreeGitFolderDirtyHL = { fg = "#895503" },
 		TelescopeResultsComment = { fg = "light_grey" },
 		RainbowDelimiterRed = { fg = "red" },
 		RainbowDelimiterYellow = { fg = "yellow" },
@@ -50,6 +58,10 @@ M.base46 = {
 		TreesitterContextLineNumber = { bg = "one_bg", fg = "grey" },
 		TreesitterContextSeparator = { fg = "light_grey", bg = "one_bg" },
 	},
+}
+
+M.term = {
+  float = { width = 0.9, height = 0.8, row = 0.1, col = 0.05 },
 }
 
 -- M.nvdash = { load_on_startup = true }

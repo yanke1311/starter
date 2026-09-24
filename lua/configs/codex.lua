@@ -4,6 +4,13 @@
 local M = {}
 
 function M.opts()
+  local hide = { "<C-q>" }
+  if vim.fn.has "mac" == 1 then
+    hide[#hide + 1] = "<D-l>"
+  else
+    hide[#hide + 1] = "<C-A-l>"
+    hide[#hide + 1] = "<M-C-l>"
+  end
   return {
     backend = "terminal",
     cmd = { require("configs.cli_path").codex() },
@@ -15,7 +22,7 @@ function M.opts()
       split_width_percentage = 0.35,
       auto_insert = true,
       -- 终端模式下这些键能藏起面板，不会把按键发给 Codex TUI
-      hide_keys = { "<D-l>", "<C-q>" },
+      hide_keys = hide,
     },
     selection = {
       enabled = true,
@@ -26,10 +33,7 @@ function M.opts()
 end
 
 function M.keys()
-  return {
-    -- VS Code Codex/Copilot Chat：⌘L 打开侧边栏
-    { "<D-l>", "<cmd>CodexFocus<cr>", mode = { "n", "v", "i", "t" }, desc = "Codex 侧边栏" },
-    -- 终端里 Cmd 经常到不了 nvim
+  local keys = {
     { "<leader>cx", "<cmd>CodexFocus<cr>", mode = { "n", "v" }, desc = "Codex 侧边栏" },
     { "<leader>cq", "<cmd>CodexClose<cr>", desc = "关闭 Codex 面板" },
     { "<leader>ca", "<cmd>CodexAsk<cr>", mode = { "n", "v" }, desc = "Codex 提问" },
@@ -37,6 +41,13 @@ function M.keys()
     { "<leader>cs", ":<C-U>CodexSendVisual<CR>", mode = "v", desc = "Codex 发送选区" },
     { "<leader>cb", "<cmd>CodexAdd<cr>", desc = "Codex 添加当前文件" },
   }
+  if vim.fn.has "mac" == 1 then
+    keys[#keys + 1] = { "<D-l>", "<cmd>CodexFocus<cr>", mode = { "n", "v", "i", "t" }, desc = "Codex 侧边栏" }
+  else
+    keys[#keys + 1] = { "<C-A-l>", "<cmd>CodexFocus<cr>", mode = { "n", "v", "i", "t" }, desc = "Codex 侧边栏" }
+    keys[#keys + 1] = { "<M-C-l>", "<cmd>CodexFocus<cr>", mode = { "n", "v", "i", "t" }, desc = "Codex 侧边栏" }
+  end
+  return keys
 end
 
 return M
