@@ -192,8 +192,11 @@ function M.opts()
       codebuddy = {
         command = acp.command,
         args = acp.args,
+        -- Avante uv.spawn 传入 env 会整表替换进程环境，必须带上 HOME，否则 WSL 读不到 ~/.codebuddy 登录态
         env = cli.child_env {
+          HOME = vim.env.HOME or vim.fn.expand "~",
           CODEBUDDY_INTERNET_ENVIRONMENT = "internal",
+          NO_COLOR = "1",
         },
       },
     },
@@ -239,7 +242,7 @@ function M.toggle()
     if sidebar_has_win(sidebar, vim.api.nvim_get_current_win()) then
       -- 输入栏里是插入模式；关掉后焦点回到代码窗，不能把 insert 带回去。
       vim.cmd "stopinsert"
-      avante.toggle()
+      avante.close_sidebar()
       vim.schedule(function()
         vim.cmd "stopinsert"
       end)
