@@ -36,15 +36,28 @@ local function prepend_path(dir)
 end
 
 local function import_login_path()
-  local out = vim.fn.system { "zsh", "-lic", "print -r -- $PATH" }
-  if vim.v.shell_error ~= 0 then
-    return
+  for _, cmd in ipairs {
+    { "zsh", "-lic", "print -r -- $PATH" },
+    { "bash", "-lc", "printf '%s\\n' \"$PATH\"" },
+  } do
+    local out = vim.fn.system(cmd)
+    if vim.v.shell_error == 0 then
+      local lines = vim.split(out or "", "\n", { trimempty = true })
+      local login_path = lines[#lines]
+      if login_path and login_path:find "/" then
+        vim.env.PATH = login_path
+        return
+      end
+    end
   end
-  local lines = vim.split(out or "", "\n", { trimempty = true })
-  local login_path = lines[#lines]
-  if login_path and login_path:find "/" then
-    vim.env.PATH = login_path
+end
+
+local function is_windows_path(path)
+  if type(path) ~= "string" or path == "" then
+    return false
   end
+  local lower = path:lower()
+  return lower:match "%.exe$" or path:find "^/mnt/" or lower:find "^[a-z]:\\"
 end
 
 function M.setup()
@@ -88,12 +101,21 @@ end
 
 function M.codebuddy()
   local bin = vim.fn.exepath "codebuddy"
-  if bin ~= "" then
+  if bin ~= "" and not is_windows_path(bin) then
     return bin
   end
-  local bundled = "/Applications/WorkBuddy.app/Contents/Resources/app.asar.unpacked/cli/bin/codebuddy"
-  if vim.fn.filereadable(bundled) == 1 then
-    return bundled
+  for _, path in ipairs {
+    vim.fn.expand "~/.local/bin/codebuddy",
+    "/usr/local/bin/codebuddy",
+    "/opt/homebrew/bin/codebuddy",
+    "/Applications/WorkBuddy.app/Contents/Resources/app.asar.unpacked/cli/bin/codebuddy",
+  } do
+    if is_exe(path) and not is_windows_path(path) then
+      return path
+    end
+  end
+  if bin ~= "" then
+    return bin
   end
   return "codebuddy"
 end
@@ -114,10 +136,37 @@ function M.child_env(extra)
   return env
 end
 
+local function codebuddy_needs_node(path)
+  if path:match "%.m?js$" then
+    return true
+  end
+  if is_windows_path(path) then
+    return false
+  end
+  local f = io.open(path, "rb")
+  if not f then
+    return false
+  end
+  local head = f:read(256) or ""
+  f:close()
+  -- 原生二进制不要用 node 包一层（WSL 上会卡 ACP）
+  if head:sub(1, 4) == "\127ELF" or head:sub(1, 4) == string.char(0xfe, 0xff, 0xff, 0xfe) then
+    return false
+  end
+  if head:sub(1, 2) == "#!" then
+    return head:find("node", 1, true) ~= nil
+  end
+  return false
+end
+
 function M.codebuddy_acp()
   local script = M.codebuddy()
+  local resolved = vim.fn.exepath(script)
+  if resolved ~= "" then
+    script = resolved
+  end
   local node = M.node()
-  if node ~= "" and vim.fn.filereadable(script) == 1 then
+  if node ~= "" and not is_windows_path(node) and codebuddy_needs_node(script) then
     return { command = node, args = { script, "--acp" } }
   end
   return { command = script, args = { "--acp" } }

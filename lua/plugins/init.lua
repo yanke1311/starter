@@ -187,6 +187,26 @@ return {
         -- 菜单弹出时不预选第一项，没动手选时回车只换行
         selection = { preselect = false, auto_insert = false },
       })
+      opts.keymap = vim.tbl_deep_extend("force", opts.keymap or {}, {
+        ["<Tab>"] = {
+          function(cmp)
+            if cmp.snippet_active() then
+              return cmp.snippet_forward()
+            end
+            return cmp.select_next()
+          end,
+          "fallback",
+        },
+        ["<S-Tab>"] = {
+          function(cmp)
+            if cmp.snippet_active() then
+              return cmp.snippet_backward()
+            end
+            return cmp.select_prev()
+          end,
+          "fallback",
+        },
+      })
       opts.sources = opts.sources or {}
       opts.sources.providers = vim.tbl_deep_extend("force", opts.sources.providers or {}, {
         avante_commands = {
@@ -257,22 +277,33 @@ return {
       local cb = require "configs.codebuddy"
       local nvi = { "n", "v", "i" }
       local nv = { "n", "v" }
-      return {
-        -- VS Code CodeBuddy 插件 / IDE（Mac）
-        { "<D-C-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
-        { "<C-D-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
-        { "<D-i>", cb.inline, mode = nvi, desc = "CodeBuddy 内联对话" },
-        { "<D-C-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
-        { "<C-D-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+      local keys = {
         { "<M-S-x>", cb.explain, mode = nv, desc = "CodeBuddy 解释代码" },
         { "<M-S-y>", cb.fix, mode = nv, desc = "CodeBuddy 修复代码" },
         { "<M-S-m>", cb.comment, mode = nv, desc = "CodeBuddy 添加注释" },
         { "<M-S-t>", cb.tests, mode = nv, desc = "CodeBuddy 生成测试" },
-        -- 终端里 Cmd 经常到不了 nvim
         { "<leader>cc", cb.toggle, desc = "CodeBuddy 侧边栏对话" },
         { "<leader>cM", cb.select_model, mode = { "n", "v" }, desc = "CodeBuddy 切换模型" },
         { "<leader>cP", cb.select_mode, mode = { "n", "v" }, desc = "CodeBuddy 切换模式" },
       }
+      if vim.fn.has "mac" == 1 then
+        vim.list_extend(keys, {
+          { "<D-C-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
+          { "<C-D-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
+          { "<D-i>", cb.inline, mode = nvi, desc = "CodeBuddy 内联对话" },
+          { "<D-C-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+          { "<C-D-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+        })
+      else
+        -- VS Code CodeBuddy：Ctrl+Alt+I；修饰符顺序因终端而异
+        vim.list_extend(keys, {
+          { "<C-A-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
+          { "<M-C-i>", cb.toggle, mode = nvi, desc = "CodeBuddy 侧边栏对话" },
+          { "<C-A-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+          { "<M-C-n>", cb.new_chat, mode = nvi, desc = "CodeBuddy 新对话" },
+        })
+      end
+      return keys
     end,
     dependencies = {
       "nvim-lua/plenary.nvim",
